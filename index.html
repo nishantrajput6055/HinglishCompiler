@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HinglishLang Compiler</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;800&display=swap');
+
+  :root {
+    --bg: #0d0f14;
+    --bg2: #13161e;
+    --bg3: #1a1e2a;
+    --bg4: #222738;
+    --border: #2a3048;
+    --border2: #3a4060;
+    --accent: #f5a623;
+    --accent2: #e07b1a;
+    --blue: #4f9cf9;
+    --blue2: #7bb8ff;
+    --green: #4caf7d;
+    --red: #f55353;
+    --purple: #a78bfa;
+    --teal: #2dd4bf;
+    --text: #e8eaf2;
+    --text2: #9aa0ba;
+    --text3: #5c6282;
+    --mono: 'JetBrains Mono', monospace;
+    --head: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--head);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo { display: flex; align-items: center; gap: 10px; }
+
+  .logo-badge {
+    background: var(--accent);
+    color: #000;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+  }
+
+  .logo-title { font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; }
+  .logo-title span { color: var(--accent); }
+
+  .header-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text3);
+    font-family: var(--mono);
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: calc(100vh - 53px);
+  }
+
+  .left-panel { display: flex; flex-direction: column; border-right: 1px solid var(--border); }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .panel-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-family: var(--mono);
+  }
+
+  .panel-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--border2);
+    cursor: pointer;
+    background: var(--bg3);
+    color: var(--text2);
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn:hover { background: var(--bg4); color: var(--text); border-color: var(--border2); }
+  .btn.primary { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 800; }
+  .btn.primary:hover { background: var(--accent2); }
+  .btn.danger { border-color: var(--red); color: var(--red); }
+  .btn.danger:hover { background: rgba(245,83,83,0.1); }
+
+  .editor-wrap { display: flex; flex: 1; overflow: hidden; }
+
+  .line-nums {
+    background: var(--bg2);
+    padding: 14px 10px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--text3);
+    text-align: right;
+    min-width: 44px;
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+    flex-shrink: 0;
+    user-select: none;
+  }
+
+  .code-editor {
+    flex: 1;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.65;
+    padding: 14px 16px;
+    border: none;
+    resize: none;
+    outline: none;
+    overflow: auto;
+    tab-size: 4;
+    caret-color: var(--accent);
+  }
+
+  .code-editor::selection { background: rgba(245,166,35,0.25); }
+
+  .bottom-bar {
+    padding: 8px 16px;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+
+  .right-panel { display: flex; flex-direction: column; background: var(--bg2); }
+
+  .tabs {
+    display: flex;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    overflow-x: auto;
+  }
+
+  .tab {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 11px 16px;
+    cursor: pointer;
+    color: var(--text3);
+    border-right: 1px solid var(--border);
+    white-space: nowrap;
+    transition: all 0.15s;
+    border-bottom: 2px solid transparent;
+    flex-shrink: 0;
+  }
+
+  .tab:hover { color: var(--text2); background: var(--bg2); }
+  .tab.active { color: var(--accent); background: var(--bg2); border-bottom: 2px solid var(--accent); }
+
+  .output-area { flex: 1; overflow: auto; padding: 16px; font-family: var(--mono); font-size: 12px; line-height: 1.7; }
+  .output-panel { display: none; }
+  .output-panel.active { display: block; }
+
+  .token-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .token-table th {
+    text-align: left; padding: 6px 10px; background: var(--bg3);
+    color: var(--text3); font-size: 10px; letter-spacing: 0.1em;
+    text-transform: uppercase; border-bottom: 1px solid var(--border);
+  }
+  .token-table td { padding: 5px 10px; border-bottom: 1px solid rgba(42,48,72,0.5); vertical-align: middle; color: var(--text2); }
+  .token-table tr:hover td { background: var(--bg3); }
+
+  .tok-badge { font-size: 10px; padding: 2px 7px; border-radius: 3px; font-weight: 600; font-family: var(--mono); }
+  .tok-KEYWORD    { background: rgba(167,139,250,0.15); color: var(--purple); }
+  .tok-IDENTIFIER { background: rgba(79,156,249,0.15);  color: var(--blue2); }
+  .tok-NUMBER     { background: rgba(245,166,35,0.15);  color: var(--accent); }
+  .tok-OPERATOR   { background: rgba(45,212,191,0.15);  color: var(--teal); }
+  .tok-DELIMITER  { background: rgba(76,175,125,0.15);  color: var(--green); }
+  .tok-FLOAT      { background: rgba(245,166,35,0.2);   color: var(--accent); }
+  .tok-STRING     { background: rgba(76,175,125,0.15);  color: var(--green); }
+
+  .ast-tree { font-family: var(--mono); font-size: 12px; line-height: 1.8; white-space: pre; }
+  .ast-node { color: var(--blue2); }
+  .ast-attr { color: var(--text3); }
+  .ast-val  { color: var(--accent); }
+  .ast-kw   { color: var(--purple); }
+
+  .sem-section { margin-bottom: 20px; }
+  .sem-title {
+    font-size: 11px; font-weight: 600; color: var(--text3);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border);
+  }
+
+  .sym-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .sym-table th {
+    text-align: left; padding: 5px 8px; background: var(--bg3);
+    color: var(--text3); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .sym-table td { padding: 4px 8px; border-bottom: 1px solid rgba(42,48,72,0.5); color: var(--text2); }
+
+  .scope-global { color: var(--accent); }
+  .scope-local  { color: var(--blue2); }
+  .type-badge   { color: var(--teal); font-size: 10px; }
+
+  .tac-line { display: flex; gap: 12px; padding: 3px 0; border-bottom: 1px solid rgba(42,48,72,0.3); align-items: baseline; }
+  .tac-num  { color: var(--text3); font-size: 10px; min-width: 24px; text-align: right; flex-shrink: 0; }
+  .tac-code { color: var(--text); }
+  .tac-tmp  { color: var(--accent); }
+  .tac-kw   { color: var(--green); }
+  .tac-comment { color: var(--text3); font-style: italic; }
+
+  .error-box {
+    background: rgba(245,83,83,0.08); border: 1px solid rgba(245,83,83,0.3);
+    border-left: 3px solid var(--red); border-radius: 5px;
+    padding: 10px 14px; margin-bottom: 8px; font-size: 12px;
+  }
+  .error-title { color: var(--red); font-weight: 600; margin-bottom: 3px; }
+  .error-msg   { color: var(--text2); }
+
+  .success-box {
+    background: rgba(76,175,125,0.08); border: 1px solid rgba(76,175,125,0.3);
+    border-left: 3px solid var(--green); border-radius: 5px;
+    padding: 10px 14px; margin-bottom: 8px; font-size: 12px;
+    color: var(--green); font-weight: 600;
+  }
+
+  .info-box {
+    background: rgba(79,156,249,0.08); border: 1px solid rgba(79,156,249,0.2);
+    border-radius: 5px; padding: 10px 14px; margin-bottom: 8px;
+    font-size: 12px; color: var(--text2);
+  }
+
+  .welcome { padding: 28px; max-width: 500px; }
+  .welcome h2 { font-size: 20px; font-weight: 800; color: var(--text); margin-bottom: 8px; letter-spacing: -0.02em; }
+  .welcome p { font-size: 13px; color: var(--text2); line-height: 1.7; margin-bottom: 16px; font-family: var(--mono); }
+
+  .kw-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 16px; }
+  .kw-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; font-family: var(--mono); padding: 4px 8px;
+    background: var(--bg3); border-radius: 4px; border: 1px solid var(--border);
+  }
+  .kw-hin   { color: var(--purple); font-weight: 600; }
+  .kw-arrow { color: var(--text3); }
+  .kw-eng   { color: var(--text3); }
+
+  .phase-bar { display: flex; gap: 3px; padding: 8px 16px; background: var(--bg); border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap; }
+  .phase-item { font-size: 10px; font-family: var(--mono); padding: 3px 9px; border-radius: 3px; border: 1px solid var(--border); color: var(--text3); transition: all 0.2s; }
+  .phase-item.done    { border-color: var(--green); color: var(--green); }
+  .phase-item.running { border-color: var(--accent); color: var(--accent); animation: pulse 1s infinite; }
+  .phase-item.error   { border-color: var(--red); color: var(--red); }
+
+  .upload-label {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    padding: 5px 12px; border-radius: 5px; border: 1px solid var(--border2);
+    cursor: pointer; background: var(--bg3); color: var(--text2); transition: all 0.15s;
+  }
+  .upload-label:hover { background: var(--bg4); color: var(--text); }
+  #file-upload { display: none; }
+
+  .sample-select {
+    font-family: var(--mono); font-size: 11px; background: var(--bg3);
+    color: var(--text2); border: 1px solid var(--border2); border-radius: 5px;
+    padding: 5px 8px; cursor: pointer; outline: none;
+  }
+  .sample-select:focus { border-color: var(--accent); }
+
+  .count { background: var(--bg4); color: var(--accent); font-size: 10px; font-family: var(--mono); padding: 1px 6px; border-radius: 10px; margin-left: 6px; }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">
+    <span class="logo-badge">v1.0</span>
+    <span class="logo-title">HinglishLang <span>Compiler</span></span>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div class="phase-bar" id="phase-bar" style="padding:0;border:none;background:none;">
+      <span class="phase-item" id="ph-lex">Lexer</span>
+      <span class="phase-item" id="ph-par">Parser</span>
+      <span class="phase-item" id="ph-sem">Semantic</span>
+      <span class="phase-item" id="ph-tac">TAC</span>
+    </div>
+    <div class="header-status">
+      <span class="status-dot"></span>
+      Ready
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="left-panel">
+    <div class="panel-header">
+      <span class="panel-label">Source Editor</span>
+      <div class="panel-actions">
+        <select class="sample-select" id="sample-select" onchange="loadSample()">
+          <option value="">Load sample...</option>
+          <option value="basic">Basic example</option>
+          <option value="functions">Functions</option>
+          <option value="loop">While loop</option>
+          <option value="full">Full program</option>
+        </select>
+        <label class="upload-label" title="Upload .txt file">
+          Upload .txt
+          <input type="file" id="file-upload" accept=".txt" onchange="uploadFile(event)">
+        </label>
+        <button class="btn danger" onclick="clearEditor()">Clear</button>
+      </div>
+    </div>
+
+    <div class="editor-wrap">
+      <div class="line-nums" id="line-nums">1</div>
+      <textarea class="code-editor" id="code-editor" spellcheck="false" placeholder="Write HinglishLang code here..."></textarea>
+    </div>
+
+    <div class="bottom-bar">
+      <button class="btn primary" onclick="runAll()">▶ Run All Phases</button>
+      <button class="btn" onclick="runLexer()">Tokenize</button>
+      <button class="btn" onclick="runParser()">Parse AST</button>
+      <button class="btn" onclick="runSemantic()">Semantic Check</button>
+      <button class="btn" onclick="runTAC()">Gen TAC</button>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('welcome')" id="tab-welcome">Guide</div>
+      <div class="tab" onclick="switchTab('tokens')" id="tab-tokens">Tokens<span class="count" id="tok-count">0</span></div>
+      <div class="tab" onclick="switchTab('ast')" id="tab-ast">AST Text</div>
+      <div class="tab" onclick="switchTab('ast-graph')" id="tab-ast-graph">AST Graph</div>
+      <div class="tab" onclick="switchTab('semantic')" id="tab-semantic">Semantic</div>
+      <div class="tab" onclick="switchTab('tac')" id="tab-tac">TAC</div>
+      <div class="tab" onclick="switchTab('errors')" id="tab-errors">Errors<span class="count" id="err-count" style="background:rgba(245,83,83,0.2);color:var(--red)">0</span></div>
+    </div>
+
+    <div class="output-area">
+      <div class="output-panel active" id="panel-welcome">
+        <div class="welcome">
+          <h2>HinglishLang</h2>
+          <p>A custom programming language using Hindi+English (Hinglish) keywords. Write code in the editor and run compiler phases.</p>
+          <div class="kw-grid">
+            <div class="kw-item"><span class="kw-hin">maan_lo</span><span class="kw-arrow">→</span><span class="kw-eng">var declare</span></div>
+            <div class="kw-item"><span class="kw-hin">kaam</span><span class="kw-arrow">→</span><span class="kw-eng">function</span></div>
+            <div class="kw-item"><span class="kw-hin">shuru</span><span class="kw-arrow">→</span><span class="kw-eng">begin block</span></div>
+            <div class="kw-item"><span class="kw-hin">khatam</span><span class="kw-arrow">→</span><span class="kw-eng">end block</span></div>
+            <div class="kw-item"><span class="kw-hin">wapas</span><span class="kw-arrow">→</span><span class="kw-eng">return</span></div>
+            <div class="kw-item"><span class="kw-hin">agar</span><span class="kw-arrow">→</span><span class="kw-eng">if</span></div>
+            <div class="kw-item"><span class="kw-hin">toh</span><span class="kw-arrow">→</span><span class="kw-eng">then</span></div>
+            <div class="kw-item"><span class="kw-hin">warna</span><span class="kw-arrow">→</span><span class="kw-eng">else</span></div>
+            <div class="kw-item"><span class="kw-hin">jab_tak</span><span class="kw-arrow">→</span><span class="kw-eng">while</span></div>
+            <div class="kw-item"><span class="kw-hin">karo</span><span class="kw-arrow">→</span><span class="kw-eng">do</span></div>
+          </div>
+          <p>Load a sample from the dropdown or write your own code, then click <strong style="color:var(--accent)">Run All Phases</strong>.</p>
+        </div>
+      </div>
+
+      <div class="output-panel" id="panel-tokens">
+        <table class="token-table">
+          <thead><tr><th>#</th><th>Token Type</th><th>Value</th><th>Line</th></tr></thead>
+          <tbody id="token-tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="output-panel" id="panel-ast">
+        <div class="ast-tree" id="ast-text-out"></div>
+      </div>
+
+      <div class="output-panel" id="panel-ast-graph">
+        <div id="ast-graph-container" style="overflow:auto;"></div>
+      </div>
+
+      <div class="output-panel" id="panel-semantic">
+        <div id="semantic-out"></div>
+      </div>
+
+      <div class="output-panel" id="panel-tac">
+        <div id="tac-out"></div>
+      </div>
+
+      <div class="output-panel" id="panel-errors">
+        <div id="errors-out"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PHASE MODULES                    -->
+<!-- ============================================================ -->
+<script src="lexical.js"></script>   <!-- Phase 1: Lexer + KEYWORDS + TOKEN_PATTERNS -->
+<script src="syntax.js"></script>    <!-- Phase 2: Parser + printAST + buildASTGraph  -->
+<script src="semantic.js"></script>  <!-- Phase 3: SemanticAnalyzer                   -->
+<script src="icg.js"></script>       <!-- Phase 4: TACGenerator + renderTAC           -->
+
+<script>
+// ============================================================
+// SAMPLE PROGRAMS
+// ============================================================
+const SAMPLES = {
+  basic: `maan_lo x = 5;
+maan_lo y = 10;
+maan_lo result = x + y;
+
+agar result > 10 toh
+    result = result + 1;
+warna
+    result = 0;
+khatam`,
+
+  functions: `kaam add(a, b) shuru
+    maan_lo c = a + b;
+    wapas c;
+khatam
+
+kaam square(n) shuru
+    maan_lo ans = n * n;
+    wapas ans;
+khatam
+
+maan_lo x = 3;
+maan_lo y = 4;
+maan_lo sum = add(x, y);
+maan_lo sq = square(x);`,
+
+  loop: `maan_lo i = 0;
+maan_lo total = 0;
+
+jab_tak i < 5 karo
+    total = total + i;
+    i = i + 1;
+khatam`,
+
+  full: `kaam add(a, b) shuru
+    maan_lo c = a + b;
+    wapas c;
+khatam
+
+maan_lo x = 5;
+maan_lo y = 10;
+maan_lo result = add(x, y);
+
+agar result > 10 toh
+    result = result + 1;
+warna
+    result = 0;
+khatam
+
+maan_lo i = 0;
+jab_tak i < 3 karo
+    i = i + 1;
+khatam`
+};
+
+// ============================================================
+// SHARED HELPER
+// ============================================================
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ============================================================
+// STATE
+// ============================================================
+let currentTokens = [];
+let currentAST    = null;
+let currentErrors = [];
+
+// ============================================================
+// UI HELPERS
+// ============================================================
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.output-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  document.getElementById(`panel-${tab}`).classList.add('active');
+}
+
+function setPhase(id, state) {
+  document.getElementById(`ph-${id}`).className = 'phase-item ' + state;
+}
+
+function resetPhases() {
+  ['lex','par','sem','tac'].forEach(p => {
+    document.getElementById(`ph-${p}`).className = 'phase-item';
+  });
+}
+
+function clearEditor() {
+  document.getElementById('code-editor').value = '';
+  document.getElementById('sample-select').value = '';
+  updateLineNums();
+  resetPhases();
+  document.getElementById('token-tbody').innerHTML = '';
+  document.getElementById('ast-text-out').innerHTML = '';
+  document.getElementById('ast-graph-container').innerHTML = '';
+  document.getElementById('semantic-out').innerHTML = '';
+  document.getElementById('tac-out').innerHTML = '';
+  document.getElementById('errors-out').innerHTML = '';
+  document.getElementById('tok-count').textContent = '0';
+  document.getElementById('err-count').textContent = '0';
+  currentErrors = [];
+  switchTab('welcome');
+}
+
+function loadSample() {
+  const val = document.getElementById('sample-select').value;
+  if (!val) return;
+  document.getElementById('code-editor').value = SAMPLES[val];
+  updateLineNums();
+}
+
+function uploadFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('code-editor').value = e.target.result;
+    updateLineNums();
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function updateLineNums() {
+  const lines = document.getElementById('code-editor').value.split('\n').length;
+  document.getElementById('line-nums').innerHTML =
+    Array.from({length: lines}, (_,i) => i+1).join('\n');
+}
+
+function getSource() { return document.getElementById('code-editor').value.trim(); }
+
+// ============================================================
+// PHASE RUNNERS
+// ============================================================
+function runLexer() {
+  const src = getSource();
+  if (!src) { alert('Please write some code first!'); return; }
+  setPhase('lex', 'running');
+
+  const lexer = new Lexer(src);                          // lexical.js
+  currentTokens = lexer.tokenize().filter(t => t.type !== 'EOF');
+  currentErrors = [...lexer.errors];
+
+  document.getElementById('tok-count').textContent = currentTokens.length;
+  document.getElementById('err-count').textContent = currentErrors.length;
+
+  document.getElementById('token-tbody').innerHTML = currentTokens.map((tok, i) => `
+    <tr>
+      <td style="color:var(--text3)">${i+1}</td>
+      <td><span class="tok-badge tok-${tok.type}">${tok.type}</span></td>
+      <td style="color:var(--text);font-family:var(--mono)">${escHtml(tok.value)}</td>
+      <td style="color:var(--text3)">${tok.line}</td>
+    </tr>
+  `).join('');
+
+  setPhase('lex', lexer.errors.length ? 'error' : 'done');
+  switchTab('tokens');
+}
+
+function runParser() {
+  const src = getSource();
+  if (!src) { alert('Please write some code first!'); return; }
+
+  const lexer = new Lexer(src);                          // lexical.js
+  const tokens = lexer.tokenize();
+  currentErrors = [...lexer.errors];
+
+  setPhase('par', 'running');
+  const parser = new Parser(tokens);                     // syntax.js
+  currentAST = parser.parseProgram();
+  currentErrors.push(...parser.errors);
+
+  document.getElementById('err-count').textContent = currentErrors.length;
+  document.getElementById('ast-text-out').innerHTML = printAST(currentAST);  // syntax.js
+
+  try {
+    document.getElementById('ast-graph-container').innerHTML = buildASTGraph(currentAST); // syntax.js
+  } catch(e) {
+    document.getElementById('ast-graph-container').innerHTML =
+      `<div class="error-box"><div class="error-title">Graph Error</div><div class="error-msg">${e.message}</div></div>`;
+  }
+
+  setPhase('par', parser.errors.length ? 'error' : 'done');
+  switchTab('ast');
+}
+
+function runSemantic() {
+  const src = getSource();
+  if (!src) { alert('Please write some code first!'); return; }
+
+  if (!currentAST) {
+    const tokens = new Lexer(src).tokenize();             // lexical.js
+    currentAST = new Parser(tokens).parseProgram();       // syntax.js
+  }
+
+  setPhase('sem', 'running');
+  const sem = new SemanticAnalyzer(currentAST);           // semantic.js
+  sem.analyze();
+  currentErrors.push(...sem.errors.map(e => ({ msg: e, line: '?' })));
+  document.getElementById('err-count').textContent = currentErrors.length;
+
+  const symRows = sem.symbolTable.map(s => `
+    <tr>
+      <td style="color:var(--text);font-weight:600;font-family:var(--mono)">${s.name}</td>
+      <td><span class="tok-badge tok-${s.type === 'function' ? 'KEYWORD' : 'IDENTIFIER'}">${s.type}</span></td>
+      <td class="${s.scope === 'global' ? 'scope-global' : 'scope-local'}">${s.scope}</td>
+      <td class="type-badge">${s.varType || s.params || '—'}</td>
+    </tr>
+  `).join('');
+
+  const errHtml = sem.errors.length === 0
+    ? `<div class="success-box">✓ No semantic errors detected</div>`
+    : sem.errors.map(e => `<div class="error-box"><div class="error-title">Semantic Error</div><div class="error-msg">${escHtml(e)}</div></div>`).join('');
+
+  document.getElementById('semantic-out').innerHTML = `
+    <div class="sem-section"><div class="sem-title">Error Analysis</div>${errHtml}</div>
+    <div class="sem-section">
+      <div class="sem-title">Symbol Table</div>
+      <table class="sym-table">
+        <thead><tr><th>Name</th><th>Kind</th><th>Scope</th><th>Type / Params</th></tr></thead>
+        <tbody>${symRows}</tbody>
+      </table>
+    </div>`;
+
+  setPhase('sem', sem.errors.length ? 'error' : 'done');
+  switchTab('semantic');
+}
+
+function runTAC() {
+  const src = getSource();
+  if (!src) { alert('Please write some code first!'); return; }
+
+  if (!currentAST) {
+    const tokens = new Lexer(src).tokenize();             // lexical.js
+    currentAST = new Parser(tokens).parseProgram();       // syntax.js
+  }
+
+  setPhase('tac', 'running');
+  const gen = new TACGenerator(currentAST);               // icg.js
+  const lines = gen.generate();
+
+  document.getElementById('tac-out').innerHTML = `
+    <div class="info-box" style="margin-bottom:12px">
+      Three Address Code (TAC) — ${lines.filter(l=>l.trim()&&!l.startsWith(';')).length} instructions generated
+    </div>
+    ${renderTAC(lines)}`;                                  // icg.js
+
+  setPhase('tac', 'done');
+  switchTab('tac');
+}
+
+function runAll() {
+  resetPhases();
+  currentErrors = [];
+  currentAST = null;
+
+  const src = getSource();
+  if (!src) { alert('Please write some code first!'); return; }
+
+  // Phase 1: Lexer
+  setPhase('lex', 'running');
+  const lexer = new Lexer(src);                          // lexical.js
+  const tokens = lexer.tokenize();
+  currentTokens = tokens.filter(t => t.type !== 'EOF');
+  currentErrors = [...lexer.errors];
+  document.getElementById('tok-count').textContent = currentTokens.length;
+  document.getElementById('token-tbody').innerHTML = currentTokens.map((tok, i) => `
+    <tr>
+      <td style="color:var(--text3)">${i+1}</td>
+      <td><span class="tok-badge tok-${tok.type}">${tok.type}</span></td>
+      <td style="color:var(--text);font-family:var(--mono)">${escHtml(tok.value)}</td>
+      <td style="color:var(--text3)">${tok.line}</td>
+    </tr>
+  `).join('');
+  setPhase('lex', lexer.errors.length ? 'error' : 'done');
+
+  // Phase 2: Parser
+  setPhase('par', 'running');
+  const parser = new Parser(tokens);                     // syntax.js
+  currentAST = parser.parseProgram();
+  currentErrors.push(...parser.errors);
+  document.getElementById('ast-text-out').innerHTML = printAST(currentAST);   // syntax.js
+  try {
+    document.getElementById('ast-graph-container').innerHTML = buildASTGraph(currentAST); // syntax.js
+  } catch(e) {}
+  setPhase('par', parser.errors.length ? 'error' : 'done');
+
+  // Phase 3: Semantic
+  setPhase('sem', 'running');
+  const sem = new SemanticAnalyzer(currentAST);          // semantic.js
+  sem.analyze();
+  currentErrors.push(...sem.errors.map(e => ({ msg: e, line: '?' })));
+
+  const symRows = sem.symbolTable.map(s => `
+    <tr>
+      <td style="color:var(--text);font-weight:600;font-family:var(--mono)">${s.name}</td>
+      <td><span class="tok-badge tok-${s.type === 'function' ? 'KEYWORD' : 'IDENTIFIER'}">${s.type}</span></td>
+      <td class="${s.scope === 'global' ? 'scope-global' : 'scope-local'}">${s.scope}</td>
+      <td class="type-badge">${s.varType || s.params || '—'}</td>
+    </tr>
+  `).join('');
+  const errHtml = sem.errors.length === 0
+    ? `<div class="success-box">✓ No semantic errors detected</div>`
+    : sem.errors.map(e => `<div class="error-box"><div class="error-title">Semantic Error</div><div class="error-msg">${escHtml(e)}</div></div>`).join('');
+  document.getElementById('semantic-out').innerHTML = `
+    <div class="sem-section"><div class="sem-title">Error Analysis</div>${errHtml}</div>
+    <div class="sem-section">
+      <div class="sem-title">Symbol Table</div>
+      <table class="sym-table">
+        <thead><tr><th>Name</th><th>Kind</th><th>Scope</th><th>Type / Params</th></tr></thead>
+        <tbody>${symRows}</tbody>
+      </table>
+    </div>`;
+  setPhase('sem', sem.errors.length ? 'error' : 'done');
+
+  // Phase 4: TAC
+  setPhase('tac', 'running');
+  const gen = new TACGenerator(currentAST);              // icg.js
+  const lines = gen.generate();
+  document.getElementById('tac-out').innerHTML = `
+    <div class="info-box" style="margin-bottom:12px">
+      Three Address Code (TAC) — ${lines.filter(l=>l.trim()&&!l.startsWith(';')).length} instructions generated
+    </div>
+    ${renderTAC(lines)}`;                                 // icg.js
+  setPhase('tac', 'done');
+
+  // Errors panel
+  document.getElementById('err-count').textContent = currentErrors.length;
+  document.getElementById('errors-out').innerHTML = currentErrors.length === 0
+    ? `<div class="success-box">✓ All ${currentTokens.length} tokens processed. No errors found across all compiler phases.</div>`
+    : currentErrors.map(e =>
+        `<div class="error-box"><div class="error-title">Error${e.line ? ' (line '+e.line+')' : ''}</div><div class="error-msg">${escHtml(e.msg || String(e))}</div></div>`
+      ).join('');
+
+  switchTab('tokens');
+}
+
+// ============================================================
+// EDITOR SYNC
+// ============================================================
+const editor = document.getElementById('code-editor');
+editor.addEventListener('input', updateLineNums);
+editor.addEventListener('scroll', () => {
+  document.getElementById('line-nums').scrollTop = editor.scrollTop;
+});
+editor.addEventListener('keydown', e => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const s = editor.selectionStart, end = editor.selectionEnd;
+    editor.value = editor.value.substring(0,s) + '    ' + editor.value.substring(end);
+    editor.selectionStart = editor.selectionEnd = s + 4;
+    updateLineNums();
+  }
+});
+
+// Default sample load
+document.getElementById('code-editor').value = SAMPLES.full;
+updateLineNums();
+</script>
+</body>
+</html>
